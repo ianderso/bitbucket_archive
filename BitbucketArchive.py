@@ -1,16 +1,17 @@
 # coding=utf-8
 from subprocess import call
+from argparse import ArgumentParser
+import sys
+import logging
 from atlassian.bitbucket import Cloud
 from boto3 import client
 from botocore.exceptions import ClientError
-import argparse
-import logging
-import sys
 
-def get_clone_url(repository, type='https'):
+
+def get_clone_url(repository, clone_type='https'):
     links = repository.get_data('links')
     for link in links['clone']:
-        if type == link['name']:
+        if clone_type == link['name']:
             return link['href']
 
 def get_repository(username, password, workspace, repository_slug):
@@ -19,57 +20,61 @@ def get_repository(username, password, workspace, repository_slug):
 
 def clone_repository(repository):
     logging.info ("Cloning %s", repository.name)
+    repo_url = get_clone_url(repository)
     try:
-        call("git clone --quiet --mirror {repo_url}".format(repo_url=get_clone_url(repository)), shell=True)
-    except:
-        logging.error ("Failed to clone %s", repository.name)
-        exit()
+        call(f"git clone --quiet --mirror {repo_url}", shell=True)
+    except Exception as e:
+        logging.error ("Failed to clone %s, error was %s", repository.name, e)
+        sys.exit()
 
 def compress_repository(repository):
+    slug=repository.slug
     logging.info ("Compressing %s", repository.name)
     try:
-        call("tar -cjf {slug}.git.tbz {slug}.git".format(slug=repository.slug), shell=True)
-    except:
-        logging.error ("Failed to Compress %s", repository.name)
-        exit()
+        call(f"tar -cjf {slug}.git.tbz {slug}.git", shell=True)
+    except Exception as e:
+        logging.error ("Failed to Compress %s, error was %s", repository.name, e)
+        sys.exit()
     try:
-        call("rm -Rf {slug}.git".format(slug=repository.slug), shell=True)
-    except:
-        logging.error ("Failed to Remove %s", repository.name)
-        exit()
+        call(f"rm -Rf {slug}.git", shell=True)
+    except Exception as e:
+        logging.error ("Failed to Remove %s, error was %s", repository.name, e)
+        sys.exit()
 
 def upload_repo_s3(repository, bucket, path):
     s3_client = client('s3')
+    slug=repository.slug
     logging.info("S3 Uploading %s", repository.name)
     try:
-        s3_client.upload_file("{slug}.git.tbz".format(slug=repository.slug), bucket, "{path}/{slug}.git.tbz".format(path=path, slug=repository.slug))
-    except ClientError as e:
-        logging.error(e)
-        exit()
+        s3_client.upload_file(f"{slug}.git.tbz", bucket, f"{path}/{slug}.git.tbz")
+    except ClientError as s3_error:
+        logging.error(s3_error)
+        sys.exit()
 
 def delete_repository(repository):
     try:
         repository.delete()
-    except:
-        logging.error ("Failed to Delete %s From Bitbucket", repository.name)
-        exit()
+    except Exception as e:
+        logging.error ("Failed to Delete %s From Bitbucket, error was %s", repository.name, e)
+        sys.exit()
 
 def get_repositories_from_file(file):
     with open(file, "r") as repofile:
         return repofile.read().splitlines()
 
-
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument("-u", "--username", help="Bitbucket Username", required=True)
     parser.add_argument("-p", "--password", help="Bitbucket Password", required=True)
-    parser.add_argument("--workspace", help="Bitbucket workspace containing the repositories to be archived")
+    parser.add_argument("--workspace",
+        help="Bitbucket workspace containing the repositories to be archived")
     parser.add_argument("--bucket", help="S3 bucket to put compressed repositories")
-    parser.add_argument("--path", default="git-archive", help="Path in the S3 bucket to use (default: git-archive)")
+    parser.add_argument("--path", default="git-archive",
+        help="Path in the S3 bucket to use (default: git-archive)")
     parser.add_argument('--file', help="Text file containing repo slugs, one per line")
     parser.add_argument('--logfile', help='filename to log output')
-    parser.add_argument('repository', nargs='*', help="instead of using a repository file, repositories can be specified on the cli")
+    parser.add_argument('repository', nargs='*',
+        help="instead of using a repository file, repositories can be specified on the cli")
     args = parser.parse_args()
 
     handlers = [logging.StreamHandler(sys.stdout)]
@@ -88,11 +93,11 @@ if __name__ == "__main__":
         repos_to_archive = get_repositories_from_file(args.file)
     else:
         logging.error("Must specify one of --file or repository")
-        exit()
+        sys.exit()
 
     for repo in repos_to_archive:
-        repository = get_repository(args.username, args.password, args.workspace, repo)
-        clone_repository(repository)
-        compress_repository(repository)
-        upload_repo_s3(repository, args.bucket, args.path)
-        delete_repository(repository)
+        archive_repository = get_repository(args.username, args.password, args.workspace, repo)
+        clone_repository(archive_repository)
+        compress_repository(archive_repository)
+        upload_repo_s3(archive_repository, args.bucket, args.path)
+        delete_repository(archive_repository)
