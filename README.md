@@ -25,7 +25,7 @@ Then install python requirements with:
 
 ## Usage
 
-`usage: main.py [-h] -u USERNAME -p PASSWORD [--workspace WORKSPACE] [--bucket BUCKET] [--path PATH] [--file FILE] [repository ...]
+`usage: BitbucketArchive.py [-h] -u USERNAME -p PASSWORD [--workspace WORKSPACE] [--bucket BUCKET] [--path PATH] [--file FILE] [--logfile LOGFILE] [repository ...]
 
 positional arguments:
   repository            instead of using a repository file, repositories can be specified on the cli
@@ -40,4 +40,5 @@ options:
                         Bitbucket workspace containing the repositories to be archived
   --bucket BUCKET       S3 bucket to put compressed repositories
   --path PATH           Path in the S3 bucket to use (default: git-archive)
-  --file FILE           Text file containing repo slugs, one per line`
+  --file FILE           Text file containing repo slugs, one per line
+  --logfile LOGFILE     filename to log output`
