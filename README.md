@@ -25,6 +25,9 @@ Then install python requirements with:
 
 ## Usage
 
+Basic usage:
+`python BitbucketArchive.py -u <bitbucket username> -p <pass> --workspace <workspace> --bucket <s3-archive-bucket-name> repo1 repo2 repo3`
+
 ```
 usage: BitbucketArchive.py [-h] -u USERNAME -p PASSWORD [--workspace WORKSPACE]
                            [--bucket BUCKET] [--path PATH] [--file FILE]
