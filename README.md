@@ -12,11 +12,11 @@ This script simplifies the process of archiving and removing old repositories fr
 
 Clone the repository to your desired location. Then, make the directory a Python vm
 
-`python3 -m venv bitbucket-archive`
+`python3 -m venv bitbucket_archive`
 
 Change directory into the repo directory, and enable the vm
 
-`cd bitbucket-archive
+`cd bitbucket_archive
  source bin/activate`
 
 Then install python requirements with:
