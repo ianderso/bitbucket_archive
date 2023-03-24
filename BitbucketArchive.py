@@ -50,6 +50,7 @@ def upload_repo_s3(repository, s3client, bucket, path):
 
 def delete_repository(repository):
     try:
+        logging.info("Deleting %s from BitBucket", repository.name)
         repository.delete()
     except Exception as e:
         logging.error ("Failed to Delete %s From Bitbucket, error was %s", repository.name, e)
